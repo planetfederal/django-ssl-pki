@@ -20,17 +20,24 @@
 
 import os
 
-from exchange import settings
+from django.conf import settings
+
+
+# Force max length validation on encrypted password fields (used by pki app)
+ENFORCE_MAX_LENGTH = int(getattr(settings.ENFORCE_MAX_LENGTH, '1'))
 
 
 # IMPORTANT: this directory should not be within application or www roots
 def get_pki_dir():
     path = settings.PKI_DIRECTORY \
         if hasattr(settings, 'PKI_DIRECTORY') else None
+    pki_env = os.getenv('PKI_DIRECTORY', None)
+    if not path and pki_env is not None:
+        path = pki_env
     # can not be defined with empty value or non-existent dir
     if path and os.path.exists(path) and os.path.isdir(path):
         return path
-    return '/usr/local/exchange-pki'
+    return '/usr/local/django-ssl-pki'
 
 
 # TODO: Add .p12|.pfx regex support for cert_match
