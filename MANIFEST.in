@@ -1,0 +1,3 @@
+include AUTHORS LICENSE README.rst
+graft exchange_pki
+prune exchange_pki/test
