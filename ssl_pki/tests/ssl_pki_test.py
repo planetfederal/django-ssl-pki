@@ -39,21 +39,13 @@ from django.test import TestCase, RequestFactory
 from django.http import HttpResponse
 
 try:
-    # Do this before geonode.services.serviceprocessors, so that apps are ready
     django.setup()
 except (RuntimeError, ImproperlyConfigured,
         AppRegistryNotReady, LookupError, ValueError):
     raise
 
-from geonode.base import models as base_models
-from geonode.maps import models as maps_models
-from geonode.services import enumerations
-from geonode.services.models import Service
-
-from . import ExchangeTest
-
-from exchange.pki.settings import get_pki_dir, SSL_DEFAULT_CONFIG
-from exchange.pki.models import (
+from ssl_pki.settings import get_pki_dir, SSL_DEFAULT_CONFIG
+from ssl_pki.models import (
     SslConfig,
     HostnamePortSslConfig,
     hostnameport_pattern_cache,
@@ -64,8 +56,8 @@ from exchange.pki.models import (
     hostnameport_pattern_for_url,
     uses_proxy_route,
 )
-from exchange.pki.crypto import Crypto
-from exchange.pki.validate import (
+from ssl_pki.crypto import Crypto
+from ssl_pki.validate import (
     PkiValidationError,
     pki_dir_path,
     pki_file_exists_readable,
@@ -85,9 +77,9 @@ from exchange.pki.validate import (
     validate_client_cert,
     validate_client_key,
 )
-from exchange.pki.ssl_adapter import SslContextAdapter
-from exchange.pki.ssl_session import SslContextSession, https_client
-from exchange.pki.utils import (
+from ssl_pki.ssl_adapter import SslContextAdapter
+from ssl_pki.ssl_session import SslContextSession, https_client
+from ssl_pki.utils import (
     protocol_relative_url,
     protocol_relative_to_scheme,
     relative_to_absolute_url,
@@ -123,7 +115,7 @@ def has_mapproxy():
         return False
 
 
-class PkiTestCase(ExchangeTest):
+class PkiTestCase(TestCase):
 
     # Note use of cls.local_fixtures, not cls.fixtures; see setUpTestData
     # local_fixtures = ['test_ssl_configs.json']
@@ -498,12 +490,12 @@ class TestHostnamePortSslConfig(PkiTestCase):
         # https://data-test.boundlessgeo.io should now not match; so deleted
 
         # Load layer legend links
-        base_models.Link.objects.all().delete()
-        self.load_local_fixtures(['test_geonode_base_legend_link.json'])
+        # base_models.Link.objects.all().delete()
+        # self.load_local_fixtures(['test_geonode_base_legend_link.json'])
 
         # Load map links
-        maps_models.MapLayer.objects.all().delete()
-        self.load_local_fixtures(['test_geonode_maps_maplayer.json'])
+        # maps_models.MapLayer.objects.all().delete()
+        # self.load_local_fixtures(['test_geonode_maps_maplayer.json'])
 
         base_urls = [
             u'https://services.arcgisonline.com',     # proxied
@@ -574,27 +566,27 @@ class TestHostnamePortSslConfig(PkiTestCase):
                     self.assertTrue(hp_adptr is None)
 
                 # Verify sync_layer_legend_urls()
-                link_url = base_models.Link.objects.get(pk=b + 1).url
-                print('link_url: {0}'.format(link_url))
-                if hp_map is not None:
-                    # Note: legend graphics URL should always be proxied, if
-                    #       mapping is enabled, as JS viewers manage the link
-                    #       themselves
-                    self.assertEqual(hp_map.enabled,
-                                     has_proxy_prefix(link_url))
-                else:
-                    self.assertFalse(has_proxy_prefix(link_url))
+                # link_url = base_models.Link.objects.get(pk=b + 1).url
+                # print('link_url: {0}'.format(link_url))
+                # if hp_map is not None:
+                #     # Note: legend graphics URL should always be proxied, if
+                #     #       mapping is enabled, as JS viewers manage the link
+                #     #       themselves
+                #     self.assertEqual(hp_map.enabled,
+                #                      has_proxy_prefix(link_url))
+                # else:
+                #     self.assertFalse(has_proxy_prefix(link_url))
 
                 # Verify sync_map_layers()
-                map_lyr = maps_models.MapLayer.objects.get(pk=b + 1)
-                self.assertFalse(has_proxy_prefix(map_lyr.ows_url))  # never
-                src_params = json.loads(map_lyr.source_params)
-
-                if hp_map is not None:
-                    self.assertEqual(hp_map.enabled and hp_map.proxy,
-                                     src_params['use_proxy'])
-                else:
-                    self.assertFalse(src_params['use_proxy'])
+                # map_lyr = maps_models.MapLayer.objects.get(pk=b + 1)
+                # self.assertFalse(has_proxy_prefix(map_lyr.ows_url))  # never
+                # src_params = json.loads(map_lyr.source_params)
+                #
+                # if hp_map is not None:
+                #     self.assertEqual(hp_map.enabled and hp_map.proxy,
+                #                      src_params['use_proxy'])
+                # else:
+                #     self.assertFalse(src_params['use_proxy'])
 
         base_specs = [
             {'match': True, 'proxy': True},    # services.arcgisonline.com
@@ -701,37 +693,37 @@ class TestHostnamePortSslConfig(PkiTestCase):
         test_base_urls(base_urls, base_specs)
 
 
-@pytest.mark.skip(reason="Because it can't auth to running exchange")
-@pytest.mark.skipif(
-    not has_mapproxy(),
-    reason='Test requires mapproxy docker-compose container running')
-class TestPkiServiceRegistration(PkiTestCase):
-
-    def setUp(self):
-        self.login()
-
-    # Service.objects.all().delete()
-
-    def testMapProxyRegistration(self):
-        logger.debug("Service.objects:\n{0}"
-                     .format(repr(Service.objects.all())))
-        mp_service = self.mp_root + 'service'
-
-        resp = self.client.post(
-            reverse("register_service"),
-            {'url': mp_service, 'type': enumerations.WMS}
-        )
-        self.assertIsNotNone(resp)
-        self.assertEqual(resp.status_code, 200)
-
-        logger.debug("Service.objects:\n{0}"
-                     .format(repr(Service.objects.all())))
-        wms_srv = Service.objects.get(base_url=mp_service)
-        self.assertEqual(wms_srv.base_url, mp_service)
-        self.assertEqual(wms_srv.online_resource, mp_service)
-        self.assertEqual(wms_srv.type, enumerations.WMS)
-        self.assertEqual(wms_srv.method, enumerations.INDEXED)
-        self.assertEqual(wms_srv.name, 'mapproxymapproxy-wms-proxy')
+# @pytest.mark.skip(reason="Because it can't auth to running exchange")
+# @pytest.mark.skipif(
+#     not has_mapproxy(),
+#     reason='Test requires mapproxy docker-compose container running')
+# class TestPkiServiceRegistration(PkiTestCase):
+#
+#     def setUp(self):
+#         self.login()
+#
+#     # Service.objects.all().delete()
+#
+#     def testMapProxyRegistration(self):
+#         logger.debug("Service.objects:\n{0}"
+#                      .format(repr(Service.objects.all())))
+#         mp_service = self.mp_root + 'service'
+#
+#         resp = self.client.post(
+#             reverse("register_service"),
+#             {'url': mp_service, 'type': enumerations.WMS}
+#         )
+#         self.assertIsNotNone(resp)
+#         self.assertEqual(resp.status_code, 200)
+#
+#         logger.debug("Service.objects:\n{0}"
+#                      .format(repr(Service.objects.all())))
+#         wms_srv = Service.objects.get(base_url=mp_service)
+#         self.assertEqual(wms_srv.base_url, mp_service)
+#         self.assertEqual(wms_srv.online_resource, mp_service)
+#         self.assertEqual(wms_srv.type, enumerations.WMS)
+#         self.assertEqual(wms_srv.method, enumerations.INDEXED)
+#         self.assertEqual(wms_srv.name, 'mapproxymapproxy-wms-proxy')
 
 
 @pytest.mark.skipif(
@@ -853,115 +845,12 @@ class TestPkiRequest(PkiTestCase):
         self.assertIn(missing_url_response, response.content.decode("utf-8"))
 
 
-@pytest.mark.skipif(
-    not has_mapproxy(),
-    reason='Test requires mapproxy docker-compose container running')
-class TestGeoNodeProxy(PkiTestCase):
-    def setUp(self):
-        self.login()
-
-    @pytest.mark.skip(reason="Because it's fixture loading needs fixed")
-    def test_proxy_request_correct_url(self):
-        proxy_root = '/proxy/?url='
-        response = self.client.get(proxy_root + quote(self.mp_root))
-        self.assertEqual(response.status_code, 200)
-        default_mp_response = '<ServiceException>unknown WMS request type'
-        self.assertIn(default_mp_response, response.content.decode("utf-8"))
-
-    def test_proxy_request_incorrect_url(self):
-        proxy_root = '/proxy/?url='
-        incorrect_url = 'https://mapproxy.boundless.test:8044/service'
-        with pytest.raises(Exception):
-            self.client.get(proxy_root + quote(incorrect_url))
-
-    # Patch pki_request so we can tell if proxy rerouted to it
-    def mock_pki_request(**kwargs):
-        return HttpResponse("Mock pki request response",
-                            status=302,
-                            content_type="text/plain")
-
-    @pytest.mark.skip(reason="Because it's fixture loading needs fixed")
-    @mock.patch("exchange.pki.views.pki_request", side_effect=mock_pki_request)
-    def test_proxy_reroute(self, mock_pki_request):
-        proxy_root = '/proxy/?url='
-        response = self.client.get(proxy_root + quote(self.mp_root))
-        # response should have gotten the mock_pki_request response
-        self.assertEqual(response.status_code,
-                         mock_pki_request.return_value.status_code)
-        self.assertEqual(response.content,
-                         mock_pki_request.return_value.content)
-
-    @mock.patch("exchange.pki.views.pki_request", side_effect=mock_pki_request)
-    def test_proxy_no_reroute(self, mock_pki_request):
-        proxy_root = '/proxy/?url='
-        response = self.client.get(proxy_root + quote(self.mp_root_http))
-        self.assertNotEqual(response.status_code,
-                            mock_pki_request.return_value.status_code)
-        self.assertNotEqual(response.content,
-                            mock_pki_request.return_value.content)
-
-
-# TODO: Is this the correct place to test service handler?
-class TestPkiServiceHandler(PkiTestCase):
-    def setUp(self):
-        self.login()
-        HostnamePortSslConfig.objects.all().delete()
-        self.create_hostname_port_mapping(6)
-        self.service_name = 'data-test'
-
-    def tearDown(self):
-        HostnamePortSslConfig.objects.all().delete()
-
-    # TODO: This may not be due to the missing fixtures, need to verify
-    @pytest.mark.skip(reason="Fails due to XMLError with WMS Service Handler")
-    def test_handler_contains_header(self):
-        from geonode.services.serviceprocessors.handler \
-            import get_service_handler
-        test_key = 'test_key'
-        test_header = {test_key: 'test_value'}
-        import pdb
-        pdb.set_trace()
-        service = get_service_handler(
-            self.mp_root,
-            enumerations.WMS,
-            test_header
-        )
-        self.assertIn('PKI_SERVICE_TYPE', service.parsed_service.headers)
-        self.assertIn('Authorization', service.parsed_service.headers)
-        self.assertIn(test_key, service.parsed_service.headers)
-        # TODO: Can arcrest serivce headers be tested as well?
-
-    @pytest.mark.skip(reason="Fails due to XMLError with WMS Service Handler")
-    @mock.patch("geonode.services.models.Service", autospec=True)
-    def test_non_pki_handler_contains_bearer_token(self, mock_service):
-        from geonode.services.views import _get_service_handler
-        request = RequestFactory().get('/layers/geonode:testlayer/')
-        request.session = []
-        # need a mock service
-        mock_service.base_url = self.mp_root
-        mock_service.type = 'WMS'
-        mock_service.name = self.service_name
-        service = _get_service_handler(request, mock_service)
-        self.assertIn('Authorization', service.parsed_service.headers)
-
-    @pytest.mark.skip(reason="Fails due to XMLError with WMS Service Handler")
-    def test_handler_contains_pki_url(self):
-        from geonode.services.serviceprocessors.handler \
-            import get_service_handler
-        wms_service = get_service_handler(self.mp_root, enumerations.WMS)
-        self.assertIsNotNone(wms_service.pki_url)
-        self.assertIsNotNone(wms_service.pki_proxy_url)
-        arcrest_service = get_service_handler(self.mp_root, enumerations.REST)
-        self.assertIsNotNone(arcrest_service.pki_url)
-        self.assertIsNotNone(arcrest_service.pki_proxy_url)
-
-
 class TestPkiUtils(PkiTestCase):
 
     def setUp(self):
         mproot = self.mp_root.rstrip('/').lower()
         mphostpport = self.mp_host_port
-        ex_local_url = settings.EXCHANGE_LOCAL_URL.rstrip('/')
+        ex_local_url = settings.SITE_LOCAL_URL.rstrip('/')
         site_url = settings.SITEURL.rstrip('/')
 
         self.base_url = \
