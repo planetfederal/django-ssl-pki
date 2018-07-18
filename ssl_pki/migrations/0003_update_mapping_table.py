@@ -7,7 +7,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('pki', '0002_default_config'),
+        ('ssl_pki', '0002_default_config'),
     ]
 
     operations = [

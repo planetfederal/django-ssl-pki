@@ -7,7 +7,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('pki', '0003_update_mapping_table'),
+        ('ssl_pki', '0003_update_mapping_table'),
     ]
 
     operations = [
