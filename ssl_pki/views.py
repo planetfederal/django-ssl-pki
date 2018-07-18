@@ -65,7 +65,7 @@ def pki_request(request, resource_url=None):
         req_host = req_host.split(':')[0]  # remove any port
     logger.debug("request host: {0}".format(req_host))
     site_url = urlsplit(settings.SITEURL)
-    exch_url = urlsplit(settings.EXCHANGE_LOCAL_URL)
+    exch_url = urlsplit(settings.SITE_LOCAL_URL)
     allowed_hosts = [
         'localhost', '127.0.0.1', '[::1]', 'testserver',
         site_url.hostname, exch_url.hostname

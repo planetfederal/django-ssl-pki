@@ -93,13 +93,13 @@ def requests_base_url(url):
 
 
 def pki_prefix():
-    exchange_local = settings.EXCHANGE_LOCAL_URL.rstrip('/')
-    return "{0}/pki/".format(exchange_local)
+    site_local = settings.SITE_LOCAL_URL.rstrip('/')
+    return "{0}/pki/".format(site_local)
 
 
 def pki_site_prefix():
-    exchange_site = settings.SITEURL.rstrip('/')
-    return "{0}/pki/".format(exchange_site)
+    site = settings.SITEURL.rstrip('/')
+    return "{0}/pki/".format(site)
 
 
 def _pki_prefixes():
