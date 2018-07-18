@@ -20,4 +20,4 @@
 
 __version__ = '1.0.0'
 
-default_app_config = 'exchange.pki.apps.PkiAppConfig'
+default_app_config = 'ssl_pki.apps.PkiAppConfig'

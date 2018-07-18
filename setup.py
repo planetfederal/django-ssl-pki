@@ -2,7 +2,7 @@ import os
 
 from setuptools import setup, find_packages
 
-version = __import__('django_ssl_pki').__version__
+version = __import__('ssl_pki').__version__
 
 
 def read(*rnames):
@@ -13,7 +13,7 @@ setup(
     name='django-ssl-pki',
     version='1.0.0',
     packages=find_packages(),
-    package_dir={'': 'django_ssl_pki'},
+    package_dir={'': 'ssl_pki'},
     url='https://github.com/boundlessgeo/django-ssl-pki',
     license='GPLv3+',
     author='Boundless Spatial',
