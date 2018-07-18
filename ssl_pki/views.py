@@ -31,7 +31,7 @@ from django.http import HttpResponse
 from django.http.request import validate_host
 from wsgiref import util as wsgiref_util
 
-from geonode.services import enumerations
+# from geonode.services import enumerations
 
 try:
     from logtailer.utils import logging_timer_expired
@@ -106,16 +106,16 @@ def pki_request(request, resource_url=None):
         if http_accept in request.META:
             headers[accept] = request.META[http_accept]
 
-    service_type = request.META['PKI_SERVICE_TYPE'] \
-        if 'PKI_SERVICE_TYPE' in request.META else None
-    if service_type == enumerations.REST or \
-            '/rest' in unquote(resource_url).lower():
-        # TODO: [FIXME] Workaround for decompression error in arcrest,
-        #       in arcrest.web._base._chunk()
-        # Needed for both /proxy reroutes and arcrest pkg
-        logger.info("PKI view service type appears to ArcREST; "
-                    "setting Accept-Encoding to none")
-        headers['Accept-Encoding'] = ''
+    # service_type = request.META['PKI_SERVICE_TYPE'] \
+    #     if 'PKI_SERVICE_TYPE' in request.META else None
+    # if service_type == enumerations.REST or \
+    #         '/rest' in unquote(resource_url).lower():
+    #     # TODO: [FIXME] Workaround for decompression error in arcrest,
+    #     #       in arcrest.web._base._chunk()
+    #     # Needed for both /proxy reroutes and arcrest pkg
+    #     logger.info("PKI view service type appears to ArcREST; "
+    #                 "setting Accept-Encoding to none")
+    #     headers['Accept-Encoding'] = ''
 
     # TODO: Passthru HTTP_REFERER?
 
