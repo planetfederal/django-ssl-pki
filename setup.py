@@ -12,8 +12,7 @@ def read(*rnames):
 setup(
     name='django-ssl-pki',
     version='1.0.0',
-    packages=find_packages(),
-    package_dir={'': 'ssl_pki'},
+    packages=find_packages('.', include=['ssl_pki'], exclude=['tests']),
     url='https://github.com/boundlessgeo/django-ssl-pki',
     license='GPLv3+',
     author='Boundless Spatial',
