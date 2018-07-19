@@ -31,7 +31,7 @@ recreate: purge
 
 test: migration-check
 	@echo "Note: test requires the django container to be running and healthy"
-	@docker-compose exec django /code/docker/django/run_tests.sh
+	@docker-compose exec django /code/docker/django/run_pki_tests.sh
 
 migration-check:
 	@docker-compose exec -T django /bin/bash \
