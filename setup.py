@@ -19,7 +19,7 @@ setup(
     author='Boundless Spatial',
     author_email='contact@boundlessgeo.com',
     description='Adds custom SSL/PKI configurations to Django applications.',
-    long_description=(read('README.rst')),
+    long_description=(read('README.md')),
     install_requires=(
         'Django>=1.8,<2',
         'django-ordered-model>=1.4.3,<2'

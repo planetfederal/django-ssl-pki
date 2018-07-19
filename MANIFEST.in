@@ -1,3 +1,3 @@
-include AUTHORS LICENSE README.rst
-graft exchange_pki
-prune exchange_pki/test
+include AUTHORS LICENSE README.md
+graft ssl_pki
+prune ssl_pki/tests
