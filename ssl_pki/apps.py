@@ -23,7 +23,7 @@ from django.apps import AppConfig
 
 class SslPkiAppConfig(AppConfig):
     name = 'ssl_pki'
-    label = 'pki'
+    label = 'ssl_pki'
     verbose_name = 'SSL/PKI'
 
     def ready(self):

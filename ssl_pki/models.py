@@ -189,8 +189,9 @@ def uses_proxy_route(url, via_query=False, scheme='https'):
         return False
 
     # No need to proxy a local GeoServer
-    if (url.startswith(settings.GEOSERVER_URL.rstrip('/')) and
-            settings.GEOSERVER_URL.startswith(settings.SITEURL.rstrip('/'))):
+    if hasattr(settings, 'GEOSERVER_URL') and \
+            (url.startswith(settings.GEOSERVER_URL.rstrip('/')) and
+             settings.GEOSERVER_URL.startswith(settings.SITEURL.rstrip('/'))):
         return False
 
     ptn = hostnameport_pattern_for_url(
@@ -486,7 +487,8 @@ class SslConfig(models.Model):
         return ssl_config
 
     def to_dict(self):
-        """Dump model values to dict like pki.settings.SSL_DEFAULT_CONFIG"""
+        """Dump model values to dict like
+        ssl_pki.settings.SSL_DEFAULT_CONFIG"""
         ssl_opts = self.ssl_options.replace(' ', '').split(',') \
             if self.ssl_options else None
         return {

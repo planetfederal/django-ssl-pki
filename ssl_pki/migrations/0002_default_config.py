@@ -26,14 +26,14 @@ from ..settings import SSL_DEFAULT_CONFIG
 
 
 def load_default_config(apps, schema_editor):
-    sslconfig = apps.get_model('pki', 'SslConfig')
+    sslconfig = apps.get_model('ssl_pki', 'SslConfig')
     db_alias = schema_editor.connection.alias
     ssl_config = sslconfig(**SSL_DEFAULT_CONFIG)
     ssl_config.save(using=db_alias)
 
 
 def delete_default_config(apps, schema_editor):
-    sslconfig = apps.get_model('pki', 'SslConfig')
+    sslconfig = apps.get_model('ssl_pki', 'SslConfig')
     db_alias = schema_editor.connection.alias
     sslconfig.objects.using(db_alias).get(pk=1).delete()
 

@@ -156,7 +156,7 @@ class Migration(migrations.Migration):
                     unique=True, verbose_name=b'Hostname:Port')),
                 ('ssl_config', models.ForeignKey(
                     related_name='+', verbose_name=b'Ssl config',
-                    to='pki.SslConfig', null=True)),
+                    to='ssl_pki.SslConfig', null=True)),
             ],
             options={
                 'ordering': ['hostname_port'],

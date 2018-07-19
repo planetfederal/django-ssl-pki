@@ -1,0 +1,6 @@
+#django
+DEV=True
+DOCKER_DJANGO=True
+MEDIA_ROOT=/app/data/media
+STATIC_ROOT=/tmp/static
+PYTHONPATH=/code

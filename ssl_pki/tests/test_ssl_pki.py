@@ -19,10 +19,12 @@
 #
 #########################################################################
 
+import os
 import json
 import logging
 # noinspection PyPackageRequirements
 import pytest
+import unittest
 import django
 import mock
 
@@ -35,8 +37,9 @@ from django.conf import settings
 from django.core import management
 from django.core.exceptions import ImproperlyConfigured, AppRegistryNotReady
 from django.core.urlresolvers import reverse
-from django.test import TestCase, RequestFactory
+from django.test import TestCase, RequestFactory, Client
 from django.http import HttpResponse
+from django.contrib.auth import get_user_model
 
 try:
     django.setup()
@@ -100,22 +103,100 @@ from ssl_pki.utils import (
 
 logger = logging.getLogger(__name__)
 
+TESTDIR = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'files')
 
-# bury these warnings for testing
-class RemovedInDjango19Warning(Exception):
-    pass
+os.environ['PKI_DIRECTORY'] = TESTDIR
 
 
-def has_mapproxy():
+def has_endpoint():
     try:
-        mp_http = get('http://mapproxy.boundless.test:8088')
-        assert mp_http.status_code == 200
+        ep_http = get('http://endpoint-pki.boundless.test:8881')
+        assert ep_http.status_code == 200
         return True
     except (ConnectionError, AssertionError):
         return False
 
 
-class PkiTestCase(TestCase):
+def skip_unless_has_endpoint():
+    try:
+        mp_http = get('http://endpoint-pki.boundless.test:8881')
+        assert mp_http.status_code == 200
+        return lambda func: func
+    except (ConnectionError, AssertionError):
+        return unittest.skip(
+            'Test requires nginx docker-compose container running')
+
+
+class DjangoTest(TestCase):
+
+    def setUp(self):
+        django.setup()
+
+    @staticmethod
+    def get_file_path(filename):
+        global TESTDIR
+        return os.path.join(TESTDIR, filename)
+
+    # The test user is a basic user, no admin/staff permissions.
+    #
+    def create_test_user(self):
+        user_model = get_user_model()
+
+        test_users = user_model.objects.filter(
+            username='test'
+        )
+        if test_users.count() > 0:
+            self.test_user = test_users[0]
+        else:
+            self.test_user = user_model.objects.create_user(
+                username='test',
+                email=''
+            )
+        self.test_user.set_password('test')
+        self.test_user.save()
+
+        return 'test', 'test'
+
+    # Admin user is the overlord for the system.
+    #
+    def create_admin_user(self):
+        user_model = get_user_model()
+
+        admin_users = user_model.objects.filter(
+            is_superuser=True
+        )
+        if admin_users.count() > 0:
+            self.admin_user = admin_users[0]
+        else:
+            self.admin_user = user_model.objects.create_superuser(
+                username='admin',
+                email='',
+                password='admin',
+            )
+        self.admin_user.set_password('admin')
+        self.admin_user.save()
+
+        return 'admin', 'admin'
+
+    def login(self, as_test=False):
+        if as_test:
+            username, password = self.create_test_user()
+        else:
+            username, password = self.create_admin_user()
+
+        self.client = Client()
+        logged_in = self.client.login(
+            username=username,
+            password=password
+        )
+        self.assertTrue(logged_in)
+
+        self.expected_status = 200
+
+        return True
+
+
+class PkiTestCase(DjangoTest):
 
     # Note use of cls.local_fixtures, not cls.fixtures; see setUpTestData
     # local_fixtures = ['test_ssl_configs.json']
@@ -124,7 +205,6 @@ class PkiTestCase(TestCase):
     @classmethod
     def setUpClass(cls):
         # django.setup()
-        management.call_command('rebuild_index')
         super(PkiTestCase, cls).setUpClass()
 
     @classmethod
@@ -200,17 +280,17 @@ class PkiTestCase(TestCase):
         assert hostnameport_pattern_cache == []
         assert hostnameport_pattern_proxy_cache == []
 
-        # Data associated with internal MapProxy test server
+        # Data associated with internal Nginx test server
         # This needs to be mixed case, to ensure SslContextAdapter handles
         # server cert matching always via lowercase hostname (bug in urllib3)
-        cls.mp_root = u'https://maPproxy.Boundless.test:8344/'
+        cls.ep_root = u'https://endPoint-pKi.Boundless.test:8445/'
 
-        cls.mp_root_http = u'http://mapproxy.boundless.test:8088/'
+        cls.ep_root_http = u'http://endpoint-pki.boundless.test:8881/'
 
         # Already know what the lookup table key should be like
-        cls.mp_host_port = hostname_port(cls.mp_root)
+        cls.ep_host_port = hostname_port(cls.ep_root)
 
-        cls.mp_txt = 'Welcome to MapProxy'
+        cls.ep_txt = 'You have arrived!'
 
         # Some debug output for sanity check on default data state
         logger.debug("SslConfig.objects:\n{0}"
@@ -223,7 +303,7 @@ class PkiTestCase(TestCase):
 
     def create_hostname_port_mapping(self, ssl_config, ptn=None):
         if ptn is None:
-            ptn = self.mp_host_port
+            ptn = self.ep_host_port
         logger.debug("Attempt Hostname:Port mapping for SslConfig: {0}"
                      .format(ssl_config))
         if isinstance(ssl_config, int):
@@ -237,17 +317,18 @@ class PkiTestCase(TestCase):
         return hp_map
 
 
+@skip_unless_has_endpoint()
 class TestSslContextSessionAdapter(PkiTestCase):
 
     def setUp(self):
         HostnamePortSslConfig.objects.all().delete()
         self.assertEqual(HostnamePortSslConfig.objects.count(), 0)
 
-        self.p1 = u'{0}*'.format(self.mp_host_port)
+        self.p1 = u'{0}*'.format(self.ep_host_port)
 
         self.getcaps_url = \
             '{0}/service?version=1.1.1&service=WMS&request=GetCapabilities'\
-            .format(self.mp_root.rstrip('/').lower())
+            .format(self.ep_root.rstrip('/').lower())
 
     def tearDown(self):
         pass
@@ -257,14 +338,14 @@ class TestSslContextSessionAdapter(PkiTestCase):
         self.create_hostname_port_mapping(config, self.p1)
         self.assertEqual(HostnamePortSslConfig.objects.count(), 1)
 
-        ssla = SslContextAdapter(self.mp_root)
+        ssla = SslContextAdapter(self.ep_root)
 
         # SslConfig options should round-trip. This indicates a hostname port
         # mapping match has occurred within adapter and that the returned
         # config's context options are the same as a direct conversion of
         # expected SslConfig
         self.assertEqual(
-            ssla.get_ssl_context_opts(normalize_hostname(self.mp_root)),
+            ssla.get_ssl_context_opts(normalize_hostname(self.ep_root)),
             SslContextAdapter.ssl_config_to_context_opts(config))
         # Same, but via dump-to-tuple method
         self.assertEqual(
@@ -277,18 +358,18 @@ class TestSslContextSessionAdapter(PkiTestCase):
         self.assertEqual(ssla.max_retries.redirect, adptr_opts['redirects'])
 
         # Request does not normalize URL
-        req = Request(method='GET', url=self.mp_root)
-        self.assertEqual(req.url, self.mp_root)
+        req = Request(method='GET', url=self.ep_root)
+        self.assertEqual(req.url, self.ep_root)
 
         # PreparedRequest does normalize URL
         p_req = req.prepare()
-        self.assertEqual(p_req.url, normalize_hostname(self.mp_root))
+        self.assertEqual(p_req.url, normalize_hostname(self.ep_root))
 
         # SslContextAdapter should always normalize the URL, because urllib3's
         # SSL cert hostname matching is case-sensitive (and shouldn't be)
-        self.assertEqual(SslContextAdapter._normalize_hostname(self.mp_root),
-                         normalize_hostname(self.mp_root))
-        self.assertEqual(SslContextAdapter._normalize_hostname(self.mp_root),
+        self.assertEqual(SslContextAdapter._normalize_hostname(self.ep_root),
+                         normalize_hostname(self.ep_root))
+        self.assertEqual(SslContextAdapter._normalize_hostname(self.ep_root),
                          p_req.url)
 
         # Sending solely via adapter (outside of session) should work for
@@ -309,7 +390,7 @@ class TestSslContextSessionAdapter(PkiTestCase):
         self.assertEqual(len(https_client.adapters), 2)
         clear_adapters()
 
-        resp = https_client.get(self.mp_root_http)
+        resp = https_client.get(self.ep_root_http)
         self.assertEqual(resp.status_code, 200)
         # No new adapters should have been created
         self.assertEqual(len(https_client.adapters), 1)
@@ -323,12 +404,12 @@ class TestSslContextSessionAdapter(PkiTestCase):
 
         resp2 = None
         try:
-            resp2 = https_client.get(self.mp_root)
+            resp2 = https_client.get(self.ep_root)
         except SSLError:
             pass  # needs PKI
         if resp2:
             self.assertEqual(resp2.status_code, 400)  # needs PKI
-        mp_adptr = https_client.get_adapter(requests_base_url(self.mp_root))
+        mp_adptr = https_client.get_adapter(requests_base_url(self.ep_root))
         self.assertIsNotNone(mp_adptr)
         self.assertIsInstance(mp_adptr, HTTPAdapter)
         self.assertEqual(len(https_client.adapters), 2)
@@ -338,14 +419,14 @@ class TestSslContextSessionAdapter(PkiTestCase):
         # Now add it back, so we can verify adding a mapping clears bad adapter
         resp2 = None
         try:
-            resp2 = https_client.get(self.mp_root)
+            resp2 = https_client.get(self.ep_root)
         except SSLError:
             pass  # still needs PKI
         if resp2:
             self.assertEqual(resp2.status_code, 400)  # still needs PKI
         self.assertEqual(len(https_client.adapters), 2)
 
-        # Add a PKI SslConfig mapping for the MapProxy endpoint
+        # Add a PKI SslConfig mapping for the Nginx endpoint
         config = self.ssl_config_4
         self.create_hostname_port_mapping(config)
         self.assertEqual(HostnamePortSslConfig.objects.count(), 1)
@@ -355,11 +436,11 @@ class TestSslContextSessionAdapter(PkiTestCase):
         self.assertEqual(len(https_client.adapters), 2)
         # Adapter should now be SslContextAdapter (not HTTPAdapter), and have
         # same SslConfig opts
-        mp_adptr1 = https_client.get_adapter(requests_base_url(self.mp_root))
+        mp_adptr1 = https_client.get_adapter(requests_base_url(self.ep_root))
         self.assertIsNotNone(mp_adptr1)
         self.assertIsInstance(mp_adptr1, SslContextAdapter)
         self.assertEqual(
-            mp_adptr1.get_ssl_context_opts(normalize_hostname(self.mp_root)),
+            mp_adptr1.get_ssl_context_opts(normalize_hostname(self.ep_root)),
             SslContextAdapter.ssl_config_to_context_opts(config))
 
         HostnamePortSslConfig.objects.all().delete()
@@ -374,17 +455,17 @@ class TestSslContextSessionAdapter(PkiTestCase):
         self.assertEqual(len(https_client.adapters), 1)
 
         # Mount the URL's adapter directly
-        https_client.mount_sslcontext_adapter(self.mp_root)
+        https_client.mount_sslcontext_adapter(self.ep_root)
         self.assertEqual(len(https_client.adapters), 2)
         # Adapter should be SslContextAdapter and have same SslConfig opts
-        mp_adptr2 = https_client.get_adapter(requests_base_url(self.mp_root))
+        mp_adptr2 = https_client.get_adapter(requests_base_url(self.ep_root))
         self.assertIsNotNone(mp_adptr2)
         self.assertIsInstance(mp_adptr2, SslContextAdapter)
         self.assertEqual(
-            mp_adptr2.get_ssl_context_opts(normalize_hostname(self.mp_root)),
+            mp_adptr2.get_ssl_context_opts(normalize_hostname(self.ep_root)),
             SslContextAdapter.ssl_config_to_context_opts(config))
 
-        resp2 = https_client.get(self.mp_root)
+        resp2 = https_client.get(self.ep_root)
         self.assertEqual(resp2.status_code, 200)
         # No new adapters should have been created
         self.assertEqual(len(https_client.adapters), 2)
@@ -392,19 +473,19 @@ class TestSslContextSessionAdapter(PkiTestCase):
         clear_adapters()
 
         # Mount the URL's adapter dynamically during a connection
-        resp3 = https_client.get(self.mp_root)
+        resp3 = https_client.get(self.ep_root)
         self.assertEqual(resp3.status_code, 200)
         # A new adapter should have been auto-created, via mapping match
         self.assertEqual(len(https_client.adapters), 2)
-        mp_adptr3 = https_client.get_adapter(requests_base_url(self.mp_root))
+        mp_adptr3 = https_client.get_adapter(requests_base_url(self.ep_root))
         self.assertIsNotNone(mp_adptr3)
         self.assertIsInstance(mp_adptr3, SslContextAdapter)
         self.assertEqual(
-            mp_adptr3.get_ssl_context_opts(normalize_hostname(self.mp_root)),
+            mp_adptr3.get_ssl_context_opts(normalize_hostname(self.ep_root)),
             SslContextAdapter.ssl_config_to_context_opts(config))
 
 
-@pytest.mark.skip(reason="Because it's fixture loading needs fixed")
+# @unittest.skip("Because it's fixture loading needs fixed")
 class TestHostnamePortSslConfig(PkiTestCase):
 
     def setUp(self):
@@ -695,7 +776,7 @@ class TestHostnamePortSslConfig(PkiTestCase):
 
 # @pytest.mark.skip(reason="Because it can't auth to running exchange")
 # @pytest.mark.skipif(
-#     not has_mapproxy(),
+#     not has_endpoint(),
 #     reason='Test requires mapproxy docker-compose container running')
 # class TestPkiServiceRegistration(PkiTestCase):
 #
@@ -726,9 +807,7 @@ class TestHostnamePortSslConfig(PkiTestCase):
 #         self.assertEqual(wms_srv.name, 'mapproxymapproxy-wms-proxy')
 
 
-@pytest.mark.skipif(
-    not has_mapproxy(),
-    reason='Test requires mapproxy docker-compose container running')
+@skip_unless_has_endpoint()
 class TestPkiRequest(PkiTestCase):
 
     def setUp(self):
@@ -769,12 +848,12 @@ class TestPkiRequest(PkiTestCase):
         config_1.https_retries = False
         config_1.save()
         host_port_map = HostnamePortSslConfig(
-            hostname_port=self.mp_host_port,
+            hostname_port=self.ep_host_port,
             ssl_config=config_1)
         host_port_map.save()
         with self.assertRaises(SSLError):
-            # Default should not work for mapproxy PKI
-            https_client.get(self.mp_root)
+            # Default should not work for Nginx PKI endpoint
+            https_client.get(self.ep_root)
 
         host_port_map = HostnamePortSslConfig(
             hostname_port='example.com',
@@ -785,55 +864,55 @@ class TestPkiRequest(PkiTestCase):
 
     def test_no_client(self):
         self.create_hostname_port_mapping(2)
-        res = https_client.get(self.mp_root)
+        res = https_client.get(self.ep_root)
         # Nginx non-standard status code 400 is for no client cert supplied
         self.assertEqual(res.status_code, 400)
 
     def test_client_no_password(self):
         self.create_hostname_port_mapping(3)
-        res = https_client.get(self.mp_root)
+        res = https_client.get(self.ep_root)
         self.assertEqual(res.status_code, 200)
-        self.assertIn(self.mp_txt, res.content.decode("utf-8"))
+        self.assertIn(self.ep_txt, res.content.decode("utf-8"))
 
     def test_client_and_password(self):
         self.create_hostname_port_mapping(4)
-        res = https_client.get(self.mp_root)
+        res = https_client.get(self.ep_root)
         self.assertEqual(res.status_code, 200)
-        self.assertIn(self.mp_txt, res.content.decode("utf-8"))
+        self.assertIn(self.ep_txt, res.content.decode("utf-8"))
 
     def test_client_and_password_alt_root(self):
         self.create_hostname_port_mapping(5)
-        res = https_client.get(self.mp_root)
+        res = https_client.get(self.ep_root)
         self.assertEqual(res.status_code, 200)
-        self.assertIn(self.mp_txt, res.content.decode("utf-8"))
+        self.assertIn(self.ep_txt, res.content.decode("utf-8"))
 
     def test_client_and_password_tls12_only(self):
         self.create_hostname_port_mapping(6)
-        res = https_client.get(self.mp_root)
+        res = https_client.get(self.ep_root)
         self.assertEqual(res.status_code, 200)
-        self.assertIn(self.mp_txt, res.content.decode("utf-8"))
+        self.assertIn(self.ep_txt, res.content.decode("utf-8"))
 
     def test_no_client_no_validation(self):
         self.create_hostname_port_mapping(7)
-        res = https_client.get(self.mp_root)
+        res = https_client.get(self.ep_root)
         self.assertEqual(res.status_code, 200)
 
     def test_client_no_password_tls12_only_ssl_opts(self):
         self.create_hostname_port_mapping(8)
-        res = https_client.get(self.mp_root)
+        res = https_client.get(self.ep_root)
         self.assertEqual(res.status_code, 200)
 
-    @pytest.mark.skip(reason="Because it's fixture loading needs fixed")
+    # @unittest.skip("Because it's fixture loading needs fixed")
     def test_pki_request_correct_url(self):
-        # client and password to access mapproxy
+        # client and password to access endpoint
         self.create_hostname_port_mapping(4)
-        response = self.client.get(pki_route(self.mp_root))
+        response = self.client.get(pki_route(self.ep_root))
         self.assertEqual(response.status_code, 200)
-        default_mp_response = 'Welcome to MapProxy'
+        default_mp_response = self.ep_txt
         self.assertIn(default_mp_response, response.content.decode("utf-8"))
 
     def test_pki_request_incorrect_url(self):
-        incorrect_url = 'https://mapproxy.boundless.test:8044/service'
+        incorrect_url = 'https://endpoint-pki.boundless.test:8044/service'
         with pytest.raises(Exception):
             self.client.get(pki_route(incorrect_url))
 
@@ -848,25 +927,25 @@ class TestPkiRequest(PkiTestCase):
 class TestPkiUtils(PkiTestCase):
 
     def setUp(self):
-        mproot = self.mp_root.rstrip('/').lower()
-        mphostpport = self.mp_host_port
+        eproot = self.ep_root.rstrip('/').lower()
+        ephostpport = self.ep_host_port
         ex_local_url = settings.SITE_LOCAL_URL.rstrip('/')
         site_url = settings.SITEURL.rstrip('/')
 
         self.base_url = \
-            '{0}/service?version=1.1.1&service=WMS'.format(mproot)
+            '{0}/service?version=1.1.1&service=WMS'.format(eproot)
         self.protocol_relative_url = \
             '//{0}/service?version=1.1.1&service=WMS'\
-            .format(mphostpport)
+            .format(ephostpport)
         self.pki_url = \
             '{0}/pki/{1}/service%3Fversion%3D1.1.1%26service%3DWMS'\
-            .format(ex_local_url, quote(mphostpport))
+            .format(ex_local_url, quote(ephostpport))
         self.pki_site_url = \
             '{0}/pki/{1}/service%3Fversion%3D1.1.1%26service%3DWMS'\
-            .format(site_url, quote(mphostpport))
+            .format(site_url, quote(ephostpport))
         self.proxy_url = \
             '{0}/proxy/?url={1}%2Fservice%3Fversion%3D1.1.1%26service%3DWMS'\
-            .format(site_url, quote_plus(mproot))
+            .format(site_url, quote_plus(eproot))
 
         logging.debug("base_url: {0}".format(self.base_url))
         logging.debug("pki_url: {0}".format(self.pki_url))

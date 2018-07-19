@@ -24,7 +24,7 @@ from django.conf import settings
 
 
 # Force max length validation on encrypted password fields (used by pki app)
-ENFORCE_MAX_LENGTH = int(getattr(settings.ENFORCE_MAX_LENGTH, '1'))
+ENFORCE_MAX_LENGTH = int(getattr(settings, 'ENFORCE_MAX_LENGTH', '1'))
 
 
 # IMPORTANT: this directory should not be within application or www roots

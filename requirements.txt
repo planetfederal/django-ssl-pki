@@ -1,5 +1,8 @@
+--index-url https://pypi.python.org/simple/
 Django==1.8.18
 six==1.10.0
+mock==2.0.0
+pytest==3.6.3
 
 # should be with [secure] for pyOpenSSL, cryptography, etc. for modern SSL
 # urllib3[secure]==1.22

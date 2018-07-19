@@ -5,3 +5,5 @@
 dist/
 build/
 django_ssl_pki.egg-info
+db.sqlite3
+.pytest_cache

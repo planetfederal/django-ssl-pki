@@ -15,7 +15,7 @@
     "ssl_options": "OP_NO_SSLv2,OP_NO_SSLv3,OP_NO_COMPRESSION",
     "client_key": ""
   },
-  "model": "pki.sslconfig",
+  "model": "ssl_pki.sslconfig",
   "pk": 1
 },
 {
@@ -34,7 +34,7 @@
     "ssl_options": "",
     "client_key": ""
   },
-  "model": "pki.sslconfig",
+  "model": "ssl_pki.sslconfig",
   "pk": 2
 },
 {
@@ -53,7 +53,7 @@
     "ssl_options": "",
     "client_key": "alice-key.pem"
   },
-  "model": "pki.sslconfig",
+  "model": "ssl_pki.sslconfig",
   "pk": 3
 },
 {
@@ -72,7 +72,7 @@
     "ssl_options": "",
     "client_key": "alice-key_w-pass.pem"
   },
-  "model": "pki.sslconfig",
+  "model": "ssl_pki.sslconfig",
   "pk": 4
 },
 {
@@ -91,7 +91,7 @@
     "ssl_options": "",
     "client_key": "jane-key_w-pass.pem"
   },
-  "model": "pki.sslconfig",
+  "model": "ssl_pki.sslconfig",
   "pk": 5
 },
 {
@@ -110,7 +110,7 @@
     "ssl_options": "",
     "client_key": "alice-key_w-pass.pem"
   },
-  "model": "pki.sslconfig",
+  "model": "ssl_pki.sslconfig",
   "pk": 6
 },
 {
@@ -129,7 +129,7 @@
     "ssl_options": "",
     "client_key": "alice-key.pem"
   },
-  "model": "pki.sslconfig",
+  "model": "ssl_pki.sslconfig",
   "pk": 7
 },
 {
@@ -148,7 +148,7 @@
     "ssl_options": "OP_NO_SSLv2, OP_NO_SSLv3, OP_NO_TLSv1, OP_NO_TLSv1_1, OP_NO_COMPRESSION",
     "client_key": "alice-key.pem"
   },
-  "model": "pki.sslconfig",
+  "model": "ssl_pki.sslconfig",
   "pk": 8
 }
 ]

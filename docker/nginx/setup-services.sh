@@ -4,24 +4,29 @@ set -e
 
 
 ### nginx
-cd /opt/mp
+cd /code
 
 nginx_etc=/etc/nginx
 
-cp -R nginx/ssl ${nginx_etc}/
+# Setup SSL
+cp -R ./ssl ${nginx_etc}/
 nginx_ssl=${nginx_etc}/ssl
 chmod 0644 ${nginx_ssl}/*.crt
 chmod 0600 ${nginx_ssl}/*.key
 
-cp -f nginx/sites-available/default ${nginx_etc}/sites-available/
-cp nginx/sites-available/mapproxy.conf ${nginx_etc}/sites-available/
-ln -fs ../sites-available/mapproxy.conf ${nginx_etc}/sites-enabled/mapproxy.conf
+[ -d ${nginx_etc}/incl.d ] || mkdir ${nginx_etc}/incl.d
+cp incl.d/ssl_cert ${nginx_etc}/incl.d/ssl_cert
 
-# forward request and error logs to docker log collector
+cp -f sites-available/default ${nginx_etc}/sites-available/
+cp sites-available/*.conf ${nginx_etc}/sites-available/
+ln -fs ../sites-available/django.conf ${nginx_etc}/sites-enabled/django.conf
+ln -fs ../sites-available/endpoint.conf ${nginx_etc}/sites-enabled/endpoint.conf
+
+# Forward request and error logs to docker log collector
 ln -sf /dev/stdout /var/log/nginx/access.log
 ln -sf /dev/stderr /var/log/nginx/error.log
 
-# Still necesssary with nginx-light on stretch?
+# Still necessary with nginx-light on stretch?
 #cd /etc/nginx
 #ln -fs /usr/lib/nginx/modules modules
 
@@ -35,19 +40,7 @@ if [ ! -e ${nginx_ssl}/dhparam2048.pem ]; then
   chmod 0600 ${nginx_ssl}/dhparam2048.pem
 fi
 
-
-### mapproxy
-cd /opt/mp
-
-cp -R mapproxy /
-
-groupadd -r uwsgi && useradd -r -g uwsgi uwsgi
-
-wget -O /world_map.mbtiles --progress=dot:giga https://boundless-exchange-test.s3.amazonaws.com/world_map.mbtiles
-chmod 0644 /world_map.mbtiles
-
-
 ### runtime
-cd /opt/mp
+cd /code
 cp entrypoint.sh /
 chmod 0755 /entrypoint.sh
