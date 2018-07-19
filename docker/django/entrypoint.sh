@@ -14,6 +14,7 @@ until ${manage} migrate --noinput; do
   >&2 echo "db is unavailable - sleeping"
   sleep 5
 done
+${manage} loaddata default_users
 ${manage} collectstatic --noinput
 ${manage} makemigrations --dry-run --verbosity 3
 

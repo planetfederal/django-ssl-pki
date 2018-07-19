@@ -99,6 +99,10 @@ TEMPLATES = [
     },
 ]
 
+FIXTURE_DIRS = [
+    os.path.join(PROJ_DIR, 'fixtures'),
+]
+
 WSGI_APPLICATION = 'ssl_pki_project.wsgi.application'
 
 

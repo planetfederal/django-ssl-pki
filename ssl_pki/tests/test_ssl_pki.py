@@ -149,10 +149,10 @@ class DjangoTest(TestCase):
                 username='test',
                 email=''
             )
-        self.test_user.set_password('test')
+        self.test_user.set_password('password')
         self.test_user.save()
 
-        return 'test', 'test'
+        return 'test', 'password'
 
     # Admin user is the overlord for the system.
     #
@@ -168,12 +168,12 @@ class DjangoTest(TestCase):
             self.admin_user = user_model.objects.create_superuser(
                 username='admin',
                 email='',
-                password='admin',
+                password='password',
             )
-        self.admin_user.set_password('admin')
+        self.admin_user.set_password('password')
         self.admin_user.save()
 
-        return 'admin', 'admin'
+        return 'admin', 'password'
 
     def login(self, as_test=False):
         if as_test:

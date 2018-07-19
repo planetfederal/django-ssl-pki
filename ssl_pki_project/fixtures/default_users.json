@@ -1,0 +1,38 @@
+[
+  {
+    "fields": {
+      "username": "admin",
+      "first_name": "Test",
+      "last_name": "Admin",
+      "is_active": true,
+      "is_superuser": true,
+      "is_staff": true,
+      "last_login": "2018-07-19T19:09:28Z",
+      "groups": [],
+      "user_permissions": [],
+      "password": "pbkdf2_sha256$20000$hwlgTRslufCQ$R4d7kcw8fJHVv8z4wT2iNcIjQLS2+jzpqzbh50/Dhn0=",
+      "email": "admin@boundlessgeo.com",
+      "date_joined": "2018-07-19T19:09:13Z"
+    },
+    "model": "auth.user",
+    "pk": 1
+  },
+  {
+    "fields": {
+      "username": "test",
+      "first_name": "Test",
+      "last_name": "User",
+      "is_active": true,
+      "is_superuser": false,
+      "is_staff": false,
+      "last_login": null,
+      "groups": [],
+      "user_permissions": [],
+      "password": "pbkdf2_sha256$20000$kkkoIQvq34Ep$BVT+Wf3D9jr8wVtTyBBt+bP2HmO9XCSRvXTCDXeFggs=",
+      "email": "test@boundlessgeo.com",
+      "date_joined": "2018-07-19T19:09:59Z"
+    },
+    "model": "auth.user",
+    "pk": 2
+  }
+]
