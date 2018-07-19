@@ -3,8 +3,10 @@ MAINTAINER Boundless development team
 
 WORKDIR /code
 
+COPY docker/django/setup.sh /tmp
+RUN bash /tmp/setup.sh
+
 COPY . .
-RUN bash /code/docker/django/setup.sh
 RUN bash /code/docker/django/setup-services.sh
 
 EXPOSE 8808
