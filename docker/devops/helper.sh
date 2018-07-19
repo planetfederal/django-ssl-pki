@@ -2,10 +2,10 @@
 
 # Code style checks
 function lint {
-    echo "-------> ssl_pki pycodestyle"
-    pycodestyle . --ignore=E722,E731
     echo "-------> ssl_pki flake8"
-    flake8 --ignore=F405,E722,E731 .
+    flake8 --exclude=.git,.pytest_cache,__pycache__,venv,.venv --ignore=F405,E722,E731 . || true
+    echo "-------> ssl_pki yamllint"
+    yamllint -d "{extends: relaxed, rules: {line-length: {max: 120}}}" $(find . -name "*.yml" -not -path "*venv/*") || true
 }
 
 function makemigrations-check {

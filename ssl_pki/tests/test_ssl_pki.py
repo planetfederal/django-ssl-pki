@@ -20,13 +20,12 @@
 #########################################################################
 
 import os
-import json
 import logging
 # noinspection PyPackageRequirements
 import pytest
 import unittest
 import django
-import mock
+# import mock
 
 from urllib import quote, quote_plus
 from requests import get, Request
@@ -36,9 +35,7 @@ from requests.exceptions import ConnectionError, SSLError, InvalidSchema
 from django.conf import settings
 from django.core import management
 from django.core.exceptions import ImproperlyConfigured, AppRegistryNotReady
-from django.core.urlresolvers import reverse
-from django.test import TestCase, RequestFactory, Client
-from django.http import HttpResponse
+from django.test import TestCase, Client
 from django.contrib.auth import get_user_model
 
 try:

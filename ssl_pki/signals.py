@@ -18,7 +18,6 @@
 #
 #########################################################################
 
-import json
 import logging
 
 from fnmatch import fnmatch
@@ -31,16 +30,12 @@ from django.dispatch import receiver
 
 from .models import (
     rebuild_hostnameport_pattern_cache,
-    hostnameport_pattern_for_url,
     HostnamePortSslConfig
 )
 from .ssl_adapter import SslContextAdapter
 from .ssl_session import https_client
 from .utils import (
     hostname_port,
-    has_proxy_prefix,
-    proxy_route,
-    proxy_route_reverse
 )
 
 logger = logging.getLogger(__name__)
@@ -139,8 +134,8 @@ def sync_https_adapters():
 #             # Legend graphic URLs should be proxied through geonode
 #             new_url = proxy_route(orig_url)
 #         else:
-#             logger.debug(u'Original link URL does not match any hostname:port:'
-#                          u' {0}'.format(orig_url))
+#             logger.debug(u'Original link URL does not match any'
+#                          u' hostname:port: {0}'.format(orig_url))
 #             new_url = orig_url
 #
 #         if new_url != link.url:
