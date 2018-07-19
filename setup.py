@@ -21,7 +21,8 @@ setup(
     description='Adds custom SSL/PKI configurations to Django applications.',
     long_description=(read('README.rst')),
     install_requires=(
-        'Django>=1.8',
+        'Django>=1.8,<2',
+        'django-ordered-model>=1.4.3,<2'
     ),
     classifiers=[
         'Development Status :: 5 - Production/Stable',
