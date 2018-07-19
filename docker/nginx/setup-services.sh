@@ -40,6 +40,7 @@ if [ ! -e ${nginx_ssl}/dhparam2048.pem ]; then
   chmod 0600 ${nginx_ssl}/dhparam2048.pem
 fi
 
+
 ### runtime
 cd /code
 cp entrypoint.sh /

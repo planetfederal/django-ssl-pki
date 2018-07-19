@@ -12,9 +12,6 @@ DEBIAN_FRONTEND=noninteractive apt-get install -y \
   python-setuptools \
   vim
 
-pip2 install -r /code/requirements.txt
-
-
 ### cleanup
 apt-get -q clean
 apt-get -q purge
