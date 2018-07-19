@@ -3,7 +3,7 @@ version: '2.1'
 services:
   django:
     container_name: ssl_pki_django
-    env_file: env
+    env_file: .env
     image: ssl_pki_django:latest
     build:
       context: .
