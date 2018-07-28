@@ -98,6 +98,7 @@ from ssl_pki.utils import (
     proxy_route_reverse,
     pki_to_proxy_route,
 )
+from ssl_pki.admin import SslConfigAdminForm, HostnamePortSslConfigAdminForm
 
 logger = logging.getLogger(__name__)
 
@@ -770,6 +771,110 @@ class TestHostnamePortSslConfig(PkiTestCase):
             for k in base_specs[i]:
                 base_specs[i][k] = False
         test_base_urls(base_urls, base_specs)
+
+
+class TestSslConfigAdminForm(PkiTestCase):
+
+    def setUp(self):
+        self.login()
+        self.valid_data = {
+            'name': 'test',
+            'ca_custom_certs': '{0}/root-root2-chains.pem'.format(
+                get_pki_dir()),
+            'client_cert': '{0}/alice-cert.pem'.format(get_pki_dir()),
+            'client_key': '{0}/alice-key_w-pass.pem'.format(get_pki_dir()),
+            'client_key_pass': 'password',
+            'ssl_verify_mode': 'CERT_REQUIRED',
+            'ssl_version': 'PROTOCOL_SSLv23',
+            'ssl_options': 'OP_NO_SSLv2, OP_NO_SSLv3, OP_NO_COMPRESSION',
+            'https_retries': 3,
+            'https_redirects': 3
+        }
+
+    def tearDown(self):
+        pass
+
+    def test_valid(self):
+        form = SslConfigAdminForm(data=self.valid_data)
+        self.assertTrue(form.is_valid())
+
+    def test_invalid(self):
+        # case: bad name
+        bad_data = self.valid_data.copy()
+        good_name = self.valid_data['name']
+        bad_data['name'] = ''
+        form = SslConfigAdminForm(data=bad_data)
+        self.assertFalse(form.is_valid())
+        bad_data['name'] = good_name
+        # case: bad ca_cert_file
+        good_ca_cert = self.valid_data['ca_custom_certs']
+        bad_data['ca_custom_certs'] = '{0}/alice-cert.pem'.format(
+            get_pki_dir())
+        form = SslConfigAdminForm(data=bad_data)
+        self.assertFalse(form.is_valid())
+        bad_data['ca_custom_certs'] = good_ca_cert
+        # case: bad client_cert
+        good_client_cert = self.valid_data['client_cert']
+        bad_data['client_cert'] = '{0}/alice-key_w-pass.pem'.format(
+            get_pki_dir())
+        form = SslConfigAdminForm(data=bad_data)
+        self.assertFalse(form.is_valid())
+        bad_data['client_cert'] = good_client_cert
+        # case: bad private_key
+        good_key = self.valid_data['client_key']
+        bad_data['client_key'] = '{0}/root-root2-chains.pem'.format(
+            get_pki_dir())
+        form = SslConfigAdminForm(data=bad_data)
+        self.assertFalse(form.is_valid())
+        bad_data['client_key'] = good_key
+        # case: incorrect password
+        bad_data['client_key_pass'] = 'bad password'
+        form = SslConfigAdminForm(data=bad_data)
+        self.assertFalse(form.is_valid())
+        # case: password not needed but provided
+        bad_data['client_key'] = '{0}/alice-key.pem'.format(get_pki_dir())
+        form = SslConfigAdminForm(data=bad_data)
+        self.assertFalse(form.is_valid())
+        del bad_data['client_key_pass']
+        # case: client_cert and private_key mismatch
+        bad_data['client_cert'] = '{0}/jane-cert.pem'.format(get_pki_dir())
+        form = SslConfigAdminForm(data=bad_data)
+        self.assertFalse(form.is_valid())
+        bad_data['client_cert'] = good_client_cert
+        # case: bad ssl_options
+        bad_data['ssl_options'] = 'nonsense, SSL, options'
+        form = SslConfigAdminForm(data=bad_data)
+        self.assertFalse(form.is_valid())
+
+
+class TestHostnamePortSslConfigAdminForm(PkiTestCase):
+
+    def setUp(self):
+        self.login()
+        self.valid_data = {
+            'hostname_port': '*.*',
+            'ssl_config': 1
+        }
+
+    def tearDown(self):
+        pass
+
+    def test_valid(self):
+        form = HostnamePortSslConfigAdminForm(data=self.valid_data)
+        self.assertTrue(form.is_valid())
+
+    def test_invalid(self):
+        bad_data = self.valid_data.copy()
+        good_hostname_port = self.valid_data['hostname_port']
+        bad_data['hostname_port'] = ''
+        form = HostnamePortSslConfigAdminForm(data=bad_data)
+        self.assertFalse(form.is_valid())
+        bad_data['hostname_port'] = good_hostname_port
+        form = HostnamePortSslConfigAdminForm(data=bad_data)
+        self.assertTrue(form.is_valid())
+        bad_data['ssl_config'] = ''
+        form = HostnamePortSslConfigAdminForm(data=bad_data)
+        self.assertFalse(form.is_valid())
 
 
 # @pytest.mark.skip(reason="Because it can't auth to running exchange")
