@@ -37,6 +37,7 @@ from django.core import management
 from django.core.exceptions import ImproperlyConfigured, AppRegistryNotReady
 from django.test import TestCase, Client
 from django.contrib.auth import get_user_model
+from urlparse import urlparse
 
 try:
     django.setup()
@@ -1021,6 +1022,21 @@ class TestPkiUtils(PkiTestCase):
         self.assertEqual(
             self.base_url,
             relative_to_absolute_url(self.base_url))
+
+    def test_url_formatting(self):
+        self.assertEqual(self.mp_root.lower(),
+                         normalize_hostname(self.mp_root))
+
+        parts = urlparse(self.mp_root)
+        hostname = parts.hostname if parts.hostname else ''
+        port = parts.port if parts.port else ''
+        self.assertEqual(u'{0}:{1}'.format(hostname, port),
+                         hostname_port(self.mp_root))
+
+        scheme = parts.scheme if parts.scheme else ''
+        self.assertEqual(u'{0}://{1}:{2}'.format(scheme, hostname, port),
+                         requests_base_url(self.mp_root))
+
 
 
 class TestPkiValidation(TestCase):
