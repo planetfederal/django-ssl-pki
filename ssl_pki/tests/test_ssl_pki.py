@@ -1129,19 +1129,18 @@ class TestPkiUtils(PkiTestCase):
             relative_to_absolute_url(self.base_url))
 
     def test_url_formatting(self):
-        self.assertEqual(self.mp_root.lower(),
-                         normalize_hostname(self.mp_root))
+        self.assertEqual(self.ep_root.lower(),
+                         normalize_hostname(self.ep_root))
 
-        parts = urlparse(self.mp_root)
+        parts = urlparse(self.ep_root)
         hostname = parts.hostname if parts.hostname else ''
         port = parts.port if parts.port else ''
         self.assertEqual(u'{0}:{1}'.format(hostname, port),
-                         hostname_port(self.mp_root))
+                         hostname_port(self.ep_root))
 
         scheme = parts.scheme if parts.scheme else ''
         self.assertEqual(u'{0}://{1}:{2}'.format(scheme, hostname, port),
-                         requests_base_url(self.mp_root))
-
+                         requests_base_url(self.ep_root))
 
 
 class TestPkiValidation(TestCase):
