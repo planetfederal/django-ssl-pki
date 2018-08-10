@@ -102,7 +102,7 @@ def sync_https_adapters():
 
 
 # noinspection PyUnusedLocal
-@receiver(post_save, sender='ssl_pki.HostnamePortSslConfig',
+@receiver(post_save, sender=HostnamePortSslConfig,
           dispatch_uid='ssl_pki_signals_post_save')
 def add_update_mapping(sender, instance, created, raw,
                        using, update_fields, **kwargs):
@@ -111,11 +111,11 @@ def add_update_mapping(sender, instance, created, raw,
     """
     rebuild_hostnameport_pattern_cache()
     sync_https_adapters()
-    patterns_changed.send('ssl_pki.HostnamePortSslConfig')
+    patterns_changed.send(HostnamePortSslConfig)
 
 
 # noinspection PyUnusedLocal
-@receiver(post_delete, sender='ssl_pki.HostnamePortSslConfig',
+@receiver(post_delete, sender=HostnamePortSslConfig,
           dispatch_uid='ssl_pki_signals_post_delete')
 def remove_mapping(sender, instance, using, **kwargs):
     """
@@ -123,4 +123,4 @@ def remove_mapping(sender, instance, using, **kwargs):
     """
     rebuild_hostnameport_pattern_cache()
     sync_https_adapters()
-    patterns_changed.send('ssl_pki.HostnamePortSslConfig')
+    patterns_changed.send(HostnamePortSslConfig)
