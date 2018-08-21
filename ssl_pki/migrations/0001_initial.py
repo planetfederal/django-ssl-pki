@@ -15,15 +15,19 @@ class Migration(migrations.Migration):
             name='SslConfig',
             fields=[
                 ('id', models.AutoField(
-                    verbose_name='ID', serialize=False, auto_created=True,
+                    verbose_name='ID',
+                    serialize=False,
+                    auto_created=True,
                     primary_key=True)),
                 ('name', models.CharField(
                     help_text=b'(REQUIRED) Display name of configuration.',
-                    max_length=128, verbose_name=b'Name')),
+                    max_length=128,
+                    verbose_name=b'Name')),
                 ('description', models.TextField(
                     help_text=b"(Optional) Details about configuration for "
                               b"user.",
-                    verbose_name=b'Description', blank=True)),
+                    verbose_name=b'Description',
+                    blank=True)),
                 ('ca_custom_certs', DynamicFilePathField(
                     help_text=b'(Optional) Certificate of concatenated '
                               b'Certificate Authorities, in PEM format. '
@@ -57,7 +61,8 @@ class Migration(migrations.Migration):
                               b"password-encrypted.",
                     path=get_pki_dir,
                     match=KEY_MATCH,
-                    verbose_name=b'Client cert private key file', blank=True)),
+                    verbose_name=b'Client cert private key file',
+                    blank=True)),
                 ('client_key_pass', EncryptedCharField(
                     help_text=b"(Optional) Client certificate's private "
                               b"key password. Limited to 100 characters.",
@@ -96,7 +101,8 @@ class Migration(migrations.Migration):
                               b'not advised. See ssl CERT_* constant '
                               b'documentation for details: '
                               b'https://docs.python.org/2/library/ssl.html',
-                    max_length=16, verbose_name=b'SSL peer verify mode',
+                    max_length=16,
+                    verbose_name=b'SSL peer verify mode',
                     choices=[(b'CERT_NONE', b'CERT NONE'),
                              (b'CERT_OPTIONAL', b'CERT OPTIONAL'),
                              (b'CERT_REQUIRED', b'CERT REQUIRED')])),
@@ -107,7 +113,9 @@ class Migration(migrations.Migration):
                               b" See ssl OP_* constant documentation for "
                               b"details: "
                               b"https://docs.python.org/2/library/ssl.html",
-                    max_length=255, verbose_name=b'SSL options', blank=True)),
+                    max_length=255,
+                    verbose_name=b'SSL options',
+                    blank=True)),
                 ('ssl_ciphers', models.TextField(
                     help_text=b"(Optional) OpenSSL string of supported "
                               b"ciphers. Note these may be ignored if "
@@ -116,13 +124,15 @@ class Migration(migrations.Migration):
                               b"used. See: "
                               b"https://wiki.openssl.org/index.php/Manual:"
                               b"Ciphers(1)",
-                    verbose_name=b'SSL ciphers', blank=True)),
+                    verbose_name=b'SSL ciphers',
+                    blank=True)),
                 ('https_retries', models.CharField(
                     default=b'3',
                     help_text=b'Number of connection retries to attempt. '
                               b'Value of 0 does not retry; False does the '
                               b'same, but skips raising an error.',
-                    max_length=6, verbose_name=b'Retry failed requests',
+                    max_length=6,
+                    verbose_name=b'Retry failed requests',
                     choices=[(b'0', b'0'), (b'1', b'1'), (b'2', b'2'),
                              (b'3', b'3'), (b'4', b'4'), (b'5', b'5'),
                              (b'6', b'6'), (b'7', b'7'), (b'8', b'8'),
@@ -133,7 +143,8 @@ class Migration(migrations.Migration):
                     help_text=b'Number of connection redirects to follow. '
                               b'Value of 0 does not follow any; False does '
                               b'the same, but skips raising an error.',
-                    max_length=6, verbose_name=b'Follow request redirects',
+                    max_length=6,
+                    verbose_name=b'Follow request redirects',
                     choices=[(b'0', b'0'), (b'1', b'1'), (b'2', b'2'),
                              (b'3', b'3'), (b'4', b'4'), (b'5', b'5'),
                              (b'6', b'6'), (b'7', b'7'), (b'8', b'8'),
@@ -149,19 +160,45 @@ class Migration(migrations.Migration):
             name='HostnamePortSslConfig',
             fields=[
                 ('hostname_port', models.CharField(
-                    primary_key=True, serialize=False, max_length=255,
-                    help_text=b"Hostname and (optional) port, e.g. "
-                              b"'mydomain.com' or 'mydomain.com:8000'. "
-                              b"MUST be all lowercase.",
-                    unique=True, verbose_name=b'Hostname:Port')),
+                    primary_key=True,
+                    serialize=False,
+                    max_length=255,
+                    help_text=b"(REQUIRED) Hostname and (optional) port. MUST "
+                              b"be all lowercase.<br/><br/>Examples:<br/><b>"
+                              b"mydomain.com</b><br/><b>mydomain.com:8000</b>"
+                              b"<br/><br/>Wildcard '*' character matching is "
+                              b"supported (use sparingly).<br/><br/>Examples:"
+                              b"<br/><b>*.mydomain.com</b> (matches "
+                              b"subdomains)<br/><b>*.mydomain.com*</b> "
+                              b"(matches subdomains and all ports)<br/><b>*.*"
+                              b"</b> (matches ALL https requests; avoid unless"
+                              b" necessary)<br/><br/><em>Use admin list view "
+                              b"to sort patterns for matching.</em>",
+                    unique=True,
+                    verbose_name=b'Hostname:Port')),
                 ('ssl_config', models.ForeignKey(
-                    related_name='+', verbose_name=b'Ssl config',
-                    to='ssl_pki.SslConfig', null=True)),
+                    related_name='+',
+                    verbose_name=b'Ssl config',
+                    to='ssl_pki.SslConfig',
+                    null=True)),
+                ('enabled', models.BooleanField(
+                    default=True,
+                    help_text=b'Whether mapping is enabled',
+                    verbose_name=b'Enabled')),
+                ('proxy', models.BooleanField(
+                    default=True,
+                    help_text=b"Whether to require client's browser "
+                              b"connections to be proxied through this "
+                              b"application.",
+                    verbose_name=b'Proxy')),
+                ('order', models.PositiveIntegerField(
+                    editable=False,
+                    db_index=True)),
             ],
             options={
-                'ordering': ['hostname_port'],
-                'verbose_name': 'Hostname:Port to SSL Config Map',
-                'verbose_name_plural': 'Hostname:Port to SSL Config Mappings',
+                'ordering': ('order',),
+                'verbose_name': 'Hostname:Port >> SSL Config',
+                'verbose_name_plural': 'Hostname:Port >> SSL Configs',
             },
         ),
         migrations.AlterUniqueTogether(
