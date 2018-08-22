@@ -64,6 +64,10 @@ from .crypto import Crypto, CryptoInvalidToken
 
 logger = logging.getLogger(__name__)
 
+# Prefix encrypted data with a static string to allow filtering
+# of encrypted data vs. non-encrypted data using vanilla queries.
+ENCRYPTED_PREFIX = '___'
+
 
 class EncryptedFieldMixin(object):
 
@@ -71,9 +75,7 @@ class EncryptedFieldMixin(object):
         # Load crypter to handle encryption/decryption
         self._crypter = Crypto()
 
-        # Prefix encrypted data with a static string to allow filtering
-        # of encrypted data vs. non-encrypted data using vanilla queries.
-        self.prefix = '___'
+        self.prefix = ENCRYPTED_PREFIX
 
         # Ensure the encrypted data does not exceed the max_length
         # of the database. Data truncation is a possibility otherwise.
