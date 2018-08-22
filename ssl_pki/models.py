@@ -388,6 +388,10 @@ class SslConfig(models.Model):
         return self.name
 
     @staticmethod
+    def ssl_version_default():
+        return SslConfig._ssl_version_default
+
+    @staticmethod
     def ssl_op_opts():
         """Runtime collection of available ssl module OP_* constants"""
         return [o for o in dir(ssl) if o.startswith('OP_')]
